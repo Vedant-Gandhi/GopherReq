@@ -10,222 +10,196 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 )
 
-// HTTP method constants
-type HTTPMethod string
+type HttpMethod string
 
 const (
-	MethodGet    HTTPMethod = "GET"
-	MethodPost   HTTPMethod = "POST"
-	MethodPut    HTTPMethod = "PUT"
-	MethodDelete HTTPMethod = "DELETE"
+	Get    HttpMethod = "GET"
+	Post   HttpMethod = "POST"
+	Put    HttpMethod = "PUT"
+	Delete HttpMethod = "DELETE"
 )
 
-var (
-	supportedHTTPMethods = []string{
-		string(MethodGet),
-		string(MethodPost),
-		string(MethodPut),
-		string(MethodDelete),
-	}
+var supportedHttpMethods = []string{string(Get), string(Post), string(Put), string(Delete)}
 
-	ErrInvalidRequestLine = errors.New("invalid request line")
-	ErrInvalidHTTPMethod  = errors.New("invalid http method")
-	ErrIncompleteHeaders  = errors.New("incomplete headers")
-)
-
-// Headers represents HTTP headers as a map
 type Headers map[string]string
 
-// RequestLine represents the first line of an HTTP request
+type HttpRequest struct {
+	RequestLine
+	headers Headers
+}
+
+type Config struct {
+	Domain  string
+	Timeout int
+}
+
+type HttpServer struct {
+	listener net.Listener
+}
+
 type RequestLine struct {
-	Method  HTTPMethod
+	Method  HttpMethod
 	URI     url.URL
 	Version string
 }
 
-// HTTPRequest represents a complete HTTP request
-type HTTPRequest struct {
-	RequestLine
-	Headers Headers // Make it public if needed by other packages
-}
-
-// ServerConfig holds configuration for the HTTP server
-type ServerConfig struct {
-	Address string        // Address to listen on
-	Timeout time.Duration // Read timeout duration
-}
-
-// DefaultConfig returns default server configuration
-func DefaultConfig() ServerConfig {
-	return ServerConfig{
-		Address: "127.0.0.1:8811",
-		Timeout: 10 * time.Second,
-	}
-}
-
-// Server represents an HTTP server
-type Server struct {
-	config   ServerConfig
-	listener net.Listener
-}
-
-// NewServer creates a new HTTP server with the given configuration
-func NewServer(cfg ServerConfig) (*Server, error) {
-	listener, err := net.Listen("tcp", cfg.Address)
+func NewServer(cfg Config) (server HttpServer, err error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:8811")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create listener: %w", err)
-	}
-
-	return &Server{
-		config:   cfg,
-		listener: listener,
-	}, nil
-}
-
-// Listen starts accepting connections
-func (s *Server) Listen() error {
-	for {
-		conn, err := s.listener.Accept()
-		if err != nil {
-			return fmt.Errorf("failed to accept connection: %w", err)
-		}
-
-		go s.handleConnection(conn)
-	}
-}
-
-// Shutdown gracefully shuts down the server
-func (s *Server) Shutdown() error {
-	return s.listener.Close()
-}
-
-// handleConnection processes a single connection
-func (s *Server) handleConnection(conn net.Conn) {
-	defer conn.Close()
-
-	request, err := s.readRequest(conn)
-	if err != nil {
-		// Log error and possibly send error response
-		fmt.Printf("Error reading request: %v\n", err)
+		fmt.Printf("Error while listening to the socket: %v\n", err)
 		return
 	}
 
-	// Handle the request (to be implemented)
-	fmt.Printf("Received request: %+v\n", request)
+	server.listener = listener
+	return
 }
 
-// readRequest reads and parses an HTTP request from a connection
-func (s *Server) readRequest(conn net.Conn) (*HTTPRequest, error) {
-	conn.SetReadDeadline(time.Now().Add(s.config.Timeout))
+func (s *HttpServer) Listen() {
+
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			fmt.Printf("Error while accepting the connection: %v\n", err)
+			continue
+		}
+
+		go handleConnection(conn)
+	}
+}
+
+func (s *HttpServer) ShutDown() {
+	s.listener.Close()
+}
+
+func handleConnection(conn net.Conn) {
+
+	headers, _ := readHeader(conn)
+
+	fmt.Printf("HEaders are - %+v", headers)
+
+	defer conn.Close()
+
+}
+
+func readHeader(conn net.Conn) (request HttpRequest, err error) {
+	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
 
 	data := new(bytes.Buffer)
 	readBuffer := make([]byte, 1024)
 
 	for {
-		n, err := conn.Read(readBuffer)
+		bytesReadCount, err := conn.Read(readBuffer)
 		if err != nil {
 			if err == io.EOF {
+				fmt.Println("Client closed the connection")
 				break
 			}
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				fmt.Println("Read timeout - no more data expected")
 				break
 			}
-			return nil, fmt.Errorf("failed to read from connection: %w", err)
+			fmt.Printf("Error while reading from the connection: %v\n", err)
+			return request, err
 		}
 
-		data.Write(readBuffer[:n])
+		data.Write(readBuffer[:bytesReadCount])
 
-		if request, complete := s.parseRequest(data.Bytes()); complete {
-			return request, nil
+		headerEnd := bytes.Index(data.Bytes(), []byte("\r\n\r\n"))
+		if headerEnd != -1 { // If we have found header end
+			headers := string(data.Bytes()[:headerEnd])
+			reqLineIdx := strings.Index(headers, "\r\n")
+
+			reqLine := headers[:reqLineIdx]
+			parsedReqLine, err := parseRequestLine(reqLine)
+			if err != nil {
+				return request, err
+			}
+
+			parsedHeaders := parseHeadertoMap(headers[reqLineIdx+2:]) // Added +2 to skip \r\n
+
+			request.headers = parsedHeaders
+			request.RequestLine = parsedReqLine
+
+			return request, nil // Return immediately after parsing headers
 		}
 	}
 
-	return nil, ErrIncompleteHeaders
+	fmt.Printf("raw data is - %v\n", data.Bytes())
+	return request, errors.New("incomplete headers")
 }
 
-// parseRequest attempts to parse an HTTP request from raw bytes
-func (s *Server) parseRequest(data []byte) (*HTTPRequest, bool) {
-	headerEnd := bytes.Index(data, []byte("\r\n\r\n"))
-	if headerEnd == -1 {
-		return nil, false
+func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
+	// Format - Method SP Request-URI SP HTTP-Version CRLF
+	// Ref - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01#Request-Line
+
+	rawData = strings.Trim(rawData, " ")
+
+	indiviualData := strings.Split(rawData, " ")
+
+	if len(indiviualData) != 3 {
+		err = errors.New("invalid request line")
+		return
 	}
 
-	headers := string(data[:headerEnd])
-	reqLineEnd := strings.Index(headers, "\r\n")
-	if reqLineEnd == -1 {
-		return nil, false
+	rawMethod := indiviualData[0]
+	rawMethod = strings.Trim(rawMethod, " ")
+
+	if !slices.Contains(supportedHttpMethods, rawMethod) {
+		err = errors.New("invalid http method")
+		return
 	}
 
-	reqLine, err := parseRequestLine(headers[:reqLineEnd])
+	reqLine.Method = HttpMethod(rawMethod)
+
+	uri, err := url.ParseRequestURI(indiviualData[1])
+
 	if err != nil {
-		return nil, false
+		return
 	}
 
-	parsedHeaders := parseHeaders(headers[reqLineEnd+2:])
+	reqLine.URI = *uri
 
-	return &HTTPRequest{
-		RequestLine: reqLine,
-		Headers:     parsedHeaders,
-	}, true
+	reqLine.Version = indiviualData[2]
+
+	return
+
 }
 
-// parseRequestLine parses the request line of an HTTP request
-func parseRequestLine(raw string) (RequestLine, error) {
-	parts := strings.Fields(raw)
-	if len(parts) != 3 {
-		return RequestLine{}, ErrInvalidRequestLine
-	}
+func parseHeadertoMap(rawHeaders string) Headers {
 
-	if !slices.Contains(supportedHTTPMethods, parts[0]) {
-		return RequestLine{}, ErrInvalidHTTPMethod
-	}
+	splitHeader := strings.Split(rawHeaders, "\r\n")
 
-	uri, err := url.ParseRequestURI(parts[1])
-	if err != nil {
-		return RequestLine{}, fmt.Errorf("invalid URI: %w", err)
-	}
+	headerMap := make(map[string]string)
+	for _, line := range splitHeader {
 
-	return RequestLine{
-		Method:  HTTPMethod(parts[0]),
-		URI:     *uri,
-		Version: parts[2],
-	}, nil
-}
+		row := strings.SplitN(line, ":", 2)
 
-// parseHeaders parses HTTP headers from a string
-func parseHeaders(raw string) Headers {
-	headers := make(Headers)
-	lines := strings.Split(raw, "\r\n")
-
-	for _, line := range lines {
-		if line == "" {
+		if len(row) != 2 {
 			continue
 		}
 
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
-			continue
+		// Trim spaces from key and value
+		key := strings.Trim(row[0], " ")
+		value := strings.Trim(row[1], " ")
+
+		// Split key by "-" and capitalize each part
+		parts := strings.Split(key, "-")
+		for i, part := range parts {
+			if len(part) > 0 {
+				// Capitalize first letter and keep rest as is
+				parts[i] = string(unicode.ToUpper(rune(part[0]))) + part[1:]
+			}
 		}
 
-		key := normalizeHeaderKey(strings.TrimSpace(parts[0]))
-		value := strings.TrimSpace(parts[1])
-		headers[key] = value
-	}
+		// Join parts back with "-"
+		finalKey := strings.Join(parts, "-")
 
-	return headers
-}
-
-// normalizeHeaderKey normalizes HTTP header keys
-func normalizeHeaderKey(key string) string {
-	parts := strings.Split(key, "-")
-	for i, part := range parts {
-		if len(part) > 0 {
-			parts[i] = strings.ToUpper(part[:1]) + strings.ToLower(part[1:])
-		}
+		headerMap[finalKey] = value
 	}
-	return strings.Join(parts, "-")
+	return headerMap
 }
 
 /** Can be used for future Post requests.
