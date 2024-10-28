@@ -218,7 +218,7 @@ func generateResponseHeaders(request HttpRequest) (response HttpResponse) {
 	}
 
 	headers := Headers{
-		"Date":           time.Now().UTC().String(),
+		"Date":           time.Now().UTC().Format(time.RFC1123),
 		"Content-Length": "0",
 	}
 
