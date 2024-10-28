@@ -4,12 +4,21 @@ import (
 	"fmt"
 	httpproto "http-v1_1/http-proto"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
 
+	godotenv.Load()
+
+	address, hasEnvAddress := os.LookupEnv("HTTP_DOMAIN")
+	if !hasEnvAddress {
+		address = "localhost:8811"
+	}
+
 	config := httpproto.Config{
-		Domain:  "localhost:8811",
+		Domain:  address,
 		Timeout: 4000,
 	}
 
