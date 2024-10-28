@@ -213,7 +213,7 @@ func generateResponseHeaders(request HttpRequest) (response HttpResponse) {
 
 	respLine := ResponseLine{
 		Code:    respCode,
-		Reason:  httpStatusCodes[respCode],
+		Reason:  httpStatusPhraseReasons[respCode],
 		Version: request.Version,
 	}
 

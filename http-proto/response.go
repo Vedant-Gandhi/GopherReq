@@ -95,7 +95,7 @@ const (
 	NETWORK_AUTH_REQUIRED      = 511
 )
 
-var httpStatusCodes = map[common.StatusCode]string{
+var httpStatusPhraseReasons = map[common.StatusCode]string{
 	// 1xx Informational
 	CONTINUE:            "Continue",
 	SWITCHING_PROTOCOLS: "Switching Protocols",
