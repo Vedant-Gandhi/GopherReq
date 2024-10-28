@@ -205,9 +205,15 @@ func parseHeadertoMap(rawHeaders string) Headers {
 
 func generateResponseHeaders(request HttpRequest) (response HttpResponse) {
 
+	respCode := common.StatusCode(OK)
+
+	if request.Method != Get {
+		respCode = common.StatusCode(NOT_IMPLEMENTED)
+	}
+
 	respLine := ResponseLine{
-		Code:    OK,
-		Reason:  httpStatusCodes[OK],
+		Code:    respCode,
+		Reason:  httpStatusCodes[respCode],
 		Version: request.Version,
 	}
 
