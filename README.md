@@ -14,7 +14,7 @@ To start with the development -
 1. **Domain** - Set the HTTP_DOMAIN key to set your custom domain.
 
 # Supported HTTP Status Codes
-*These are the constants you can use in the code.*
+*These are the constants declared which you can use in the code.*
 
 ## 1xx Informational
 
