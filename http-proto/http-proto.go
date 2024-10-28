@@ -28,7 +28,7 @@ type Headers map[string]string
 
 type HttpRequest struct {
 	RequestLine
-	headers Headers
+	Headers Headers
 }
 
 type Config struct {
@@ -42,7 +42,7 @@ type HttpServer struct {
 
 type RequestLine struct {
 	Method  HttpMethod
-	URI     url.URL
+	URI     string
 	Version string
 }
 
@@ -120,14 +120,14 @@ func readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 			parsedHeaders := parseHeadertoMap(headers[reqLineIdx+2:]) // Added +2 to skip \r\n
 
-			request.headers = parsedHeaders
+			request.Headers = parsedHeaders
 			request.RequestLine = parsedReqLine
 
 			return request, nil // Return immediately after parsing headers
 		}
 	}
 
-	fmt.Printf("raw data is - %v\n", data.Bytes())
+	//fmt.Printf("raw data is - %v\n", data.Bytes())
 	return request, errors.New("incomplete headers")
 }
 
@@ -154,13 +154,18 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 
 	reqLine.Method = HttpMethod(rawMethod)
 
-	uri, err := url.ParseRequestURI(indiviualData[1])
+	// By default set the resource as self.
+	reqLine.URI = "*"
 
-	if err != nil {
-		return
+	if indiviualData[1] != "*" {
+		uri, err := url.ParseRequestURI(indiviualData[1])
+
+		if err != nil {
+			return reqLine, err
+		}
+
+		reqLine.URI = uri.String()
 	}
-
-	reqLine.URI = *uri
 
 	reqLine.Version = indiviualData[2]
 
