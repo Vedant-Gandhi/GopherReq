@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"http-v1_1/http-proto/common"
 	"io"
 	"net"
 	"net/url"
@@ -26,11 +27,6 @@ var supportedHttpMethods = []string{string(Get), string(Post), string(Put), stri
 
 type Headers map[string]string
 
-type HttpRequest struct {
-	RequestLine
-	Headers Headers
-}
-
 type Config struct {
 	Domain  string
 	Timeout int
@@ -38,12 +34,6 @@ type Config struct {
 
 type HttpServer struct {
 	listener net.Listener
-}
-
-type RequestLine struct {
-	Method  HttpMethod
-	URI     string
-	Version string
 }
 
 func NewServer(cfg Config) (server HttpServer, err error) {
@@ -76,9 +66,15 @@ func (s *HttpServer) ShutDown() {
 
 func handleConnection(conn net.Conn) {
 
-	headers, _ := readHeader(conn)
+	request, _ := readHeader(conn)
 
-	fmt.Printf("HEaders are - %+v", headers)
+	fmt.Printf("HEaders are - %+v", request)
+
+	response := generateResponseHeaders(request)
+
+	encodedResponse := encodeResponseforTransfer(response)
+
+	conn.Write(encodedResponse)
 
 	defer conn.Close()
 
@@ -205,6 +201,44 @@ func parseHeadertoMap(rawHeaders string) Headers {
 		headerMap[finalKey] = value
 	}
 	return headerMap
+}
+
+func generateResponseHeaders(request HttpRequest) (response HttpResponse) {
+
+	respLine := ResponseLine{
+		Code:    OK,
+		Reason:  httpStatusCodes[OK],
+		Version: request.Version,
+	}
+
+	headers := Headers{
+		"Date":           time.Now().UTC().String(),
+		"Content-Length": "0",
+	}
+
+	response = HttpResponse{
+		ResponseLine: respLine,
+		Headers:      headers,
+	}
+
+	return
+
+}
+
+func encodeResponseforTransfer(response HttpResponse) (data []byte) {
+
+	wireResponse := strings.Builder{}
+
+	wireResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.Version, response.Code, response.Reason, common.CRLF)) // The Response Line.
+
+	for key, value := range response.Headers {
+		wireResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	}
+
+	wireResponse.WriteString(common.CRLF)
+
+	data = []byte(wireResponse.String())
+	return
 }
 
 /** Can be used for future Post requests.
