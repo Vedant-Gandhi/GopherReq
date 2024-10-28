@@ -8,3 +8,7 @@ To start with the development -
 3. Currently the socket is hardcoded at "localhost:8811" but soon will shift to env/config.
 4. Things are messy now so you are welcome to refactor the code to make it more readable.
 5. Feel free to open issue for any suggestion,doubt or criticism.
+
+
+#### I have added support for env files. Following is a list of supported env variables - 
+1. **Domain** - Set the HTTP_DOMAIN key to set your custom domain.
