@@ -290,24 +290,6 @@ func parseQuery(request HttpRequest) (HttpRequest, error) {
 	return request, nil
 }
 
-func parseCookies(request HttpRequest) (HttpRequest, error) {
-
-	if len(request.URI) == 0 {
-		return request, nil
-	}
-
-	query, err := url.ParseQuery(request.URI)
-
-	if err != nil {
-		fmt.Printf("Error while parsing the query variables - %v", err)
-		return request, err
-	}
-
-	request.Query = query
-
-	return request, nil
-}
-
 /** Can be used for future Post requests.
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
