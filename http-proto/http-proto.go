@@ -23,6 +23,8 @@ const (
 	Delete HttpMethod = "DELETE"
 )
 
+const HEADER_LIMIT_BYTES = 8192
+
 var supportedHttpMethods = []string{string(Get), string(Post), string(Put), string(Delete)}
 
 type Headers map[string]string
@@ -69,8 +71,6 @@ func handleConnection(conn net.Conn) {
 	request, _ := readHeader(conn)
 	request, _ = parseQuery(request)
 
-	fmt.Printf("HEaders are - %+v", request)
-
 	response := generateHttpResponse(request)
 
 	encodedResponse := encodeResponseforTransfer(response)
@@ -87,6 +87,7 @@ func readHeader(conn net.Conn) (request HttpRequest, err error) {
 	data := new(bytes.Buffer)
 	readBuffer := make([]byte, 1024)
 
+	// This loop keeps on reading headers if it does not fit in one buffer.
 	for {
 		bytesReadCount, err := conn.Read(readBuffer)
 		if err != nil {
@@ -103,6 +104,10 @@ func readHeader(conn net.Conn) (request HttpRequest, err error) {
 		}
 
 		data.Write(readBuffer[:bytesReadCount])
+
+		if data.Len() > HEADER_LIMIT_BYTES {
+			break
+		}
 
 		headerEnd := bytes.Index(data.Bytes(), []byte("\r\n\r\n"))
 		if headerEnd != -1 { // If we have found header end
@@ -139,7 +144,6 @@ func readHeader(conn net.Conn) (request HttpRequest, err error) {
 		}
 	}
 
-	//fmt.Printf("raw data is - %v\n", data.Bytes())
 	return request, errors.New("incomplete headers")
 }
 
