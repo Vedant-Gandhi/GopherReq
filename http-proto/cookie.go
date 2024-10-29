@@ -35,7 +35,7 @@ const (
 	SameSiteNoneMode
 )
 
-var ErrInvalidCookieFormat = errors.New("Cookie format is not valid.")
+var ErrInvalidCookieFormat = errors.New("Cookie format is invalid")
 
 // String returns the string representation of SameSite attribute
 func (s SameSite) String() string {
@@ -89,7 +89,6 @@ func (l *CookieList) Get(key string) (value Cookie, exists bool) {
 
 func (l *CookieList) Add(c Cookie) {
 	l.cookies[c.Name] = c
-	return
 
 }
 
