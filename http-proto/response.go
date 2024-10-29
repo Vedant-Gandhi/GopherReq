@@ -1,10 +1,16 @@
 package httpproto
 
-import "http-v1_1/http-proto/common"
+import (
+	"http-v1_1/http-proto/common"
+	"io"
+)
+
+type ResponseBody io.ReadCloser
 
 type HttpResponse struct {
-	Headers
-	ResponseLine
+	Headers      Headers
+	ResponseLine ResponseLine
+	Body         ResponseBody
 }
 
 type ResponseLine struct {

@@ -67,10 +67,11 @@ func (s *HttpServer) ShutDown() {
 func handleConnection(conn net.Conn) {
 
 	request, _ := readHeader(conn)
+	request, _ = parseQuery(request)
 
 	fmt.Printf("HEaders are - %+v", request)
 
-	response := generateResponseHeaders(request)
+	response := generateHttpResponse(request)
 
 	encodedResponse := encodeResponseforTransfer(response)
 
@@ -118,6 +119,21 @@ func readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 			request.Headers = parsedHeaders
 			request.RequestLine = parsedReqLine
+
+			if len(request.Headers["Cookie"]) != 0 {
+				request.Cookies = NewCookieList()
+				splitCookies := strings.Split(request.Headers["Cookie"], ";")
+				for _, cookie := range splitCookies {
+					c, err := parseRequestCookie(cookie)
+					if err != nil {
+						fmt.Printf("Error cookie is not valid - %v", err)
+						continue
+					}
+
+					request.Cookies.Add(c)
+
+				}
+			}
 
 			return request, nil // Return immediately after parsing headers
 		}
@@ -203,7 +219,7 @@ func parseHeadertoMap(rawHeaders string) Headers {
 	return headerMap
 }
 
-func generateResponseHeaders(request HttpRequest) (response HttpResponse) {
+func generateHttpResponse(request HttpRequest) (response HttpResponse) {
 
 	respCode := common.StatusCode(OK)
 
@@ -235,7 +251,7 @@ func encodeResponseforTransfer(response HttpResponse) (data []byte) {
 
 	wireResponse := strings.Builder{}
 
-	wireResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.Version, response.Code, response.Reason, common.CRLF)) // The Response Line.
+	wireResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.ResponseLine.Version, response.ResponseLine.Code, response.ResponseLine.Reason, common.CRLF)) // The Response Line.
 
 	for key, value := range response.Headers {
 		wireResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
@@ -245,6 +261,42 @@ func encodeResponseforTransfer(response HttpResponse) (data []byte) {
 
 	data = []byte(wireResponse.String())
 	return
+}
+
+func parseQuery(request HttpRequest) (HttpRequest, error) {
+
+	if len(request.URI) == 0 {
+		return request, nil
+	}
+
+	query, err := url.ParseQuery(request.URI)
+
+	if err != nil {
+		fmt.Printf("Error while parsing the query variables - %v", err)
+		return request, err
+	}
+
+	request.Query = query
+
+	return request, nil
+}
+
+func parseCookies(request HttpRequest) (HttpRequest, error) {
+
+	if len(request.URI) == 0 {
+		return request, nil
+	}
+
+	query, err := url.ParseQuery(request.URI)
+
+	if err != nil {
+		fmt.Printf("Error while parsing the query variables - %v", err)
+		return request, err
+	}
+
+	request.Query = query
+
+	return request, nil
 }
 
 /** Can be used for future Post requests.
