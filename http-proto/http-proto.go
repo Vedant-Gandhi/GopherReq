@@ -36,6 +36,7 @@ type Config struct {
 
 type HttpServer struct {
 	listener net.Listener
+	timeout  int
 }
 
 func NewServer(cfg Config) (server HttpServer, err error) {
@@ -46,6 +47,7 @@ func NewServer(cfg Config) (server HttpServer, err error) {
 	}
 
 	server.listener = listener
+	server.timeout = cfg.Timeout
 	return
 }
 
@@ -58,7 +60,7 @@ func (s *HttpServer) Listen() {
 			continue
 		}
 
-		go handleConnection(conn)
+		go s.handleConnection(conn)
 	}
 }
 
@@ -66,9 +68,9 @@ func (s *HttpServer) ShutDown() {
 	s.listener.Close()
 }
 
-func handleConnection(conn net.Conn) {
+func (s *HttpServer) handleConnection(conn net.Conn) {
 
-	request, _ := readHeader(conn)
+	request, _ := s.readHeader(conn)
 	request, _ = parseQuery(request)
 
 	response := generateHttpResponse(request)
@@ -81,8 +83,11 @@ func handleConnection(conn net.Conn) {
 
 }
 
-func readHeader(conn net.Conn) (request HttpRequest, err error) {
+func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	if h.timeout != 0 {
+		conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
+	}
 
 	data := new(bytes.Buffer)
 	readBuffer := make([]byte, 1024)
