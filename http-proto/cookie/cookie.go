@@ -170,10 +170,13 @@ func ParseRequestCookie(cookie string) (c Cookie, err error) {
 		return
 	}
 
+	isSecure := strings.HasPrefix(splits[0], "__Secure")
+
 	c = Cookie{
 		Name:     splits[0],
 		Value:    splits[1],
 		Unparsed: splits,
+		Secure:   isSecure,
 	}
 
 	return
