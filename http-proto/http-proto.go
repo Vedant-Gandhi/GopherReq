@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"http-v1_1/http-proto/common"
+	"http-v1_1/http-proto/cookie"
 	"io"
 	"net"
 	"net/url"
@@ -131,10 +132,10 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 			request.RequestLine = parsedReqLine
 
 			if len(request.Headers["Cookie"]) != 0 {
-				request.Cookies = NewCookieList()
+				request.Cookies = cookie.NewCookieList()
 				splitCookies := strings.Split(request.Headers["Cookie"], ";")
-				for _, cookie := range splitCookies {
-					c, err := parseRequestCookie(cookie)
+				for _, splitCookie := range splitCookies {
+					c, err := cookie.ParseRequestCookie(splitCookie)
 					if err != nil {
 						fmt.Printf("Error cookie is not valid - %v", err)
 						continue

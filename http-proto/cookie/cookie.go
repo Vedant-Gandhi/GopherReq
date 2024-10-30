@@ -1,4 +1,4 @@
-package httpproto
+package cookie
 
 import (
 	"errors"
@@ -161,7 +161,7 @@ func (c *Cookie) Validate() error {
 
 	return nil
 }
-func parseRequestCookie(cookie string) (c Cookie, err error) {
+func ParseRequestCookie(cookie string) (c Cookie, err error) {
 
 	splits := strings.SplitN(cookie, "=", 2)
 
