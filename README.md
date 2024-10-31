@@ -1,94 +1,141 @@
-# Http-1.1-Lib
+# HTTP-1.1-Lib
 
-This project aims for more personal growth to learn how the HTTP protocol works under the hood, understand the complexities of the protocol and gain more insights in a step by step way. I have started this as a side project and am enthusiastic for suggestions and improvements.
+A Go library implementing HTTP/1.1 protocol from scratch, designed for learning and understanding the protocol's inner workings.
 
-To start with the development - 
-1. Clone the repo to local machine.
-2. Just run the command `go run main.go`.
-3. Currently the socket is hardcoded at "localhost:8811" but soon will shift to env/config.
-4. Things are messy now so you are welcome to refactor the code to make it more readable.
-5. Feel free to open issue for any suggestion,doubt or criticism.
+## 📋 Overview
 
+This educational project aims to:
+- Implement HTTP/1.1 protocol from the ground up
+- Provide insights into the protocol's complexities
+- Serve as a learning resource for HTTP protocol internals.
+- Document the journey on step by step implementation of how one can implement the HTTP/1.1 protocol for their own learning.
 
-#### I have added support for env files. Following is a list of supported env variables - 
-1. **Domain** - Set the HTTP_DOMAIN key to set your custom domain.
+## 🚀 Getting Started
 
-# Supported HTTP Status Codes
-*These are the constants declared which you can use in the code.*
+### Prerequisites
+- Go 1.x or higher
+- Git
 
-## 1xx Informational
+### Installation
 
-- `CONTINUE` (100)
-- `SWITCHING_PROTOCOLS` (101)
-- `PROCESSING` (102)
-- `EARLY_HINTS` (103)
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/http-1.1-lib.git
+cd http-1.1-lib
+```
 
-## 2xx Success
+2. Install dependencies
+```bash
+go mod tidy
+```
 
-- `OK` (200)
-- `CREATED` (201)
-- `ACCEPTED` (202)
-- `NON_AUTHORITATIVE` (203)
-- `NO_CONTENT` (204)
-- `RESET_CONTENT` (205)
-- `PARTIAL_CONTENT` (206)
-- `MULTI_STATUS` (207)
-- `ALREADY_REPORTED` (208)
-- `IM_USED` (226)
+3. Run the application
+```bash
+go run main.go
+```
 
-## 3xx Redirection
+## ⚙️ Configuration
 
-- `MULTIPLE_CHOICES` (300)
-- `MOVED_PERMANENTLY` (301)
-- `FOUND` (302)
-- `SEE_OTHER` (303)
-- `NOT_MODIFIED` (304)
-- `USE_PROXY` (305)
-- `TEMPORARY_REDIRECT` (307)
-- `PERMANENT_REDIRECT` (308)
+The library supports configuration through environment variables:
 
-## 4xx Client Errors
+| Variable | Description | Default |
+|----------|-------------|---------|
+| HTTP_DOMAIN | Custom domain for the server | localhost |
 
-- `BAD_REQUEST` (400)
-- `UNAUTHORIZED` (401)
-- `PAYMENT_REQUIRED` (402)
-- `FORBIDDEN` (403)
-- `NOT_FOUND` (404)
-- `METHOD_NOT_ALLOWED` (405)
-- `NOT_ACCEPTABLE` (406)
-- `PROXY_AUTH_REQUIRED` (407)
-- `REQUEST_TIMEOUT` (408)
-- `CONFLICT` (409)
-- `GONE` (410)
-- `LENGTH_REQUIRED` (411)
-- `PRECONDITION_FAILED` (412)
-- `PAYLOAD_TOO_LARGE` (413)
-- `URI_TOO_LONG` (414)
-- `UNSUPPORTED_MEDIA_TYPE` (415)
-- `RANGE_NOT_SATISFIABLE` (416)
-- `EXPECTATION_FAILED` (417)
-- `IM_A_TEAPOT` (418)
-- `MISDIRECTED_REQUEST` (421)
-- `UNPROCESSABLE_ENTITY` (422)
-- `LOCKED` (423)
-- `FAILED_DEPENDENCY` (424)
-- `TOO_EARLY` (425)
-- `UPGRADE_REQUIRED` (426)
-- `PRECONDITION_REQUIRED` (428)
-- `TOO_MANY_REQUESTS` (429)
-- `HEADERS_TOO_LARGE` (431)
-- `LEGAL_REASONS` (451)
+## 📘 HTTP Status Codes Reference
 
-## 5xx Server Errors
+### 1xx Informational
+| Code | Constant | Description |
+|------|----------|-------------|
+| 100 | CONTINUE | Continue with the request |
+| 101 | SWITCHING_PROTOCOLS | Protocol switching in progress |
+| 102 | PROCESSING | Request is being processed |
+| 103 | EARLY_HINTS | Early hints about the response |
 
-- `INTERNAL_SERVER_ERROR` (500)
-- `NOT_IMPLEMENTED` (501)
-- `BAD_GATEWAY` (502)
-- `SERVICE_UNAVAILABLE` (503)
-- `GATEWAY_TIMEOUT` (504)
-- `HTTP_VERSION_NOT_SUPPORTED` (505)
-- `VARIANT_ALSO_NEGOTIATES` (506)
-- `INSUFFICIENT_STORAGE` (507)
-- `LOOP_DETECTED` (508)
-- `NOT_EXTENDED` (510)
-- `NETWORK_AUTH_REQUIRED` (511)
+### 2xx Success
+| Code | Constant | Description |
+|------|----------|-------------|
+| 200 | OK | Request succeeded |
+| 201 | CREATED | Resource created successfully |
+| 202 | ACCEPTED | Request accepted for processing |
+| 203 | NON_AUTHORITATIVE | Modified server response |
+| 204 | NO_CONTENT | No content to send |
+| 205 | RESET_CONTENT | Reset document view |
+| 206 | PARTIAL_CONTENT | Partial resource returned |
+| 207 | MULTI_STATUS | Multiple status operations |
+| 208 | ALREADY_REPORTED | Resource previously reported |
+| 226 | IM_USED | Instance manipulation used |
+
+### 3xx Redirection
+| Code | Constant | Description |
+|------|----------|-------------|
+| 300 | MULTIPLE_CHOICES | Multiple options available |
+| 301 | MOVED_PERMANENTLY | Resource moved permanently |
+| 302 | FOUND | Resource found elsewhere |
+| 303 | SEE_OTHER | See other resource |
+| 304 | NOT_MODIFIED | Resource not modified |
+| 305 | USE_PROXY | Use proxy for request |
+| 307 | TEMPORARY_REDIRECT | Temporary redirect |
+| 308 | PERMANENT_REDIRECT | Permanent redirect |
+
+### 4xx Client Errors
+| Code | Constant | Description |
+|------|----------|-------------|
+| 400 | BAD_REQUEST | Bad request syntax |
+| 401 | UNAUTHORIZED | Authentication required |
+| 402 | PAYMENT_REQUIRED | Payment required |
+| 403 | FORBIDDEN | Request forbidden |
+| 404 | NOT_FOUND | Resource not found |
+| 405 | METHOD_NOT_ALLOWED | Method not allowed |
+| 406 | NOT_ACCEPTABLE | Not acceptable response |
+| 407 | PROXY_AUTH_REQUIRED | Proxy authentication required |
+| 408 | REQUEST_TIMEOUT | Request timeout |
+| 409 | CONFLICT | Request conflict |
+| 410 | GONE | Resource gone |
+| 411 | LENGTH_REQUIRED | Length required |
+| 412 | PRECONDITION_FAILED | Precondition failed |
+| 413 | PAYLOAD_TOO_LARGE | Payload too large |
+| 414 | URI_TOO_LONG | URI too long |
+| 415 | UNSUPPORTED_MEDIA_TYPE | Unsupported media type |
+| 416 | RANGE_NOT_SATISFIABLE | Range not satisfiable |
+| 417 | EXPECTATION_FAILED | Expectation failed |
+| 418 | IM_A_TEAPOT | I'm a teapot |
+| 421 | MISDIRECTED_REQUEST | Misdirected request |
+| 422 | UNPROCESSABLE_ENTITY | Unprocessable entity |
+| 423 | LOCKED | Resource locked |
+| 424 | FAILED_DEPENDENCY | Failed dependency |
+| 425 | TOO_EARLY | Too early |
+| 426 | UPGRADE_REQUIRED | Upgrade required |
+| 428 | PRECONDITION_REQUIRED | Precondition required |
+| 429 | TOO_MANY_REQUESTS | Too many requests |
+| 431 | HEADERS_TOO_LARGE | Headers too large |
+| 451 | LEGAL_REASONS | Unavailable for legal reasons |
+
+### 5xx Server Errors
+| Code | Constant | Description |
+|------|----------|-------------|
+| 500 | INTERNAL_SERVER_ERROR | Internal server error |
+| 501 | NOT_IMPLEMENTED | Not implemented |
+| 502 | BAD_GATEWAY | Bad gateway |
+| 503 | SERVICE_UNAVAILABLE | Service unavailable |
+| 504 | GATEWAY_TIMEOUT | Gateway timeout |
+| 505 | HTTP_VERSION_NOT_SUPPORTED | HTTP version not supported |
+| 506 | VARIANT_ALSO_NEGOTIATES | Variant also negotiates |
+| 507 | INSUFFICIENT_STORAGE | Insufficient storage |
+| 508 | LOOP_DETECTED | Loop detected |
+| 510 | NOT_EXTENDED | Not extended |
+| 511 | NETWORK_AUTH_REQUIRED | Network authentication required |
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+- Open issues for bug reports or feature requests
+- Submit pull requests for improvements
+- Provide feedback on code organization
+- Suggest documentation improvements
+
+## ✨ Acknowledgments
+
+- Vedant Gandhi
+
+If you contribute feel free to add your name here.
