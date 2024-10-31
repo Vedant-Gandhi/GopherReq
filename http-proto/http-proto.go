@@ -84,6 +84,8 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 
 	request, _ = parseRequestCookie(request)
 
+	_ = readBody(&request, conn)
+
 	response := generateHttpResponse(request)
 
 	encodedResponse := encodeHttpResponseToBinary(response)
