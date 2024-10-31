@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -39,6 +40,10 @@ type HttpServer struct {
 	listener net.Listener
 	timeout  int
 }
+
+var (
+	ErrInvalidContentLength = errors.New("content length is invalid")
+)
 
 func NewServer(cfg Config) (server HttpServer, err error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:8811")
@@ -74,7 +79,10 @@ func (s *HttpServer) ShutDown() {
 func (s *HttpServer) handleConnection(conn net.Conn) {
 
 	request, _ := s.readHeader(conn)
+
 	request, _ = parseQuery(request)
+
+	request, _ = parseRequestCookie(request)
 
 	response := generateHttpResponse(request)
 
@@ -88,9 +96,6 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 
 func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	if h.timeout != 0 {
-		conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
-	}
 
 	data := new(bytes.Buffer)
 	readBuffer := make([]byte, 1024)
@@ -98,6 +103,11 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 	// This loop keeps on reading headers if it does not fit in one buffer.
 	for {
 		bytesReadCount, err := conn.Read(readBuffer)
+
+		// Update the read deadline.
+		if h.timeout != 0 {
+			conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
+		}
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client closed the connection")
@@ -132,21 +142,6 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 			request.Headers = parsedHeaders
 			request.RequestLine = parsedReqLine
-
-			if len(request.Headers["Cookie"]) != 0 {
-				request.Cookies = cookie.NewCookieList()
-				splitCookies := strings.Split(request.Headers["Cookie"], ";")
-				for _, splitCookie := range splitCookies {
-					c, err := cookie.ParseRequestCookie(splitCookie)
-					if err != nil {
-						fmt.Printf("Error cookie is not valid - %v", err)
-						continue
-					}
-
-					request.Cookies.Add(c)
-
-				}
-			}
 
 			return request, nil // Return immediately after parsing headers
 		}
@@ -291,6 +286,46 @@ func parseQuery(request HttpRequest) (HttpRequest, error) {
 	request.Query = query
 
 	return request, nil
+}
+
+func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
+	if len(request.Headers["Cookie"]) != 0 {
+		request.Cookies = cookie.NewCookieList()
+		splitCookies := strings.Split(request.Headers["Cookie"], ";")
+		for _, splitCookie := range splitCookies {
+			c, err := cookie.ParseRequestCookie(splitCookie)
+			if err != nil {
+				fmt.Printf("Error cookie is not valid - %v", err)
+				continue
+			}
+
+			request.Cookies.Add(c)
+
+		}
+	}
+	return request, nil
+}
+
+func readBody(req *HttpRequest, conn net.Conn) (err error) {
+
+	bodyLen, err := strconv.Atoi(req.Headers["Content-Length"])
+
+	if err != nil {
+		err = ErrInvalidContentLength
+		return
+	}
+
+	if bodyLen == 0 {
+		return
+	}
+
+	buffer := make([]byte, bodyLen)
+
+	_, err = conn.Read(buffer)
+
+	req.Body = bytes.NewReader(buffer)
+
+	return err
 }
 
 /** Can be used for future Post requests.
