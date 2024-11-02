@@ -66,6 +66,34 @@ func (s SameSite) String() string {
 	return "Unknown"
 }
 
+func (c Cookie) String() string {
+	s := fmt.Sprintf("%s=%s;", c.Name, c.Value)
+
+	if c.Path != "" {
+		s += fmt.Sprintf(" Path=%s;", c.Path)
+	}
+	if c.Domain != "" {
+		s += fmt.Sprintf(" Domain=%s;", c.Domain)
+	}
+	if !c.Expires.IsZero() {
+		s += fmt.Sprintf(" Expires=%s;", c.Expires.UTC().Format(time.RFC1123))
+	}
+	if c.MaxAge > 0 {
+		s += fmt.Sprintf(" Max-Age=%d;", c.MaxAge)
+	}
+	if c.HttpOnly {
+		s += " HttpOnly;"
+	}
+	if c.Secure {
+		s += " Secure;"
+	}
+	if c.SameSite > 0 {
+		s += fmt.Sprintf(" SameSite=%s;", c.SameSite)
+	}
+
+	return s
+}
+
 // isValidName checks if the cookie name follows RFC 6265 specs
 func isValidName(name string) bool {
 	if name == "" {
