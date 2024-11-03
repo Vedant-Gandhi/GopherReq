@@ -7,7 +7,8 @@ import (
 
 type ResponseBody io.ReadCloser
 
-type HttpResponse struct {
+// This stores the actual wire transfer encoded HttpResponse. If are a client please use HttpResponse.
+type HttpWireResponse struct {
 	Headers      Headers
 	ResponseLine ResponseLine
 	Body         ResponseBody

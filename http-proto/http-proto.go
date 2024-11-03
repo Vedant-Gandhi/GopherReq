@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -16,18 +17,9 @@ import (
 	"unicode"
 )
 
-type HttpMethod string
-
-const (
-	Get    HttpMethod = "GET"
-	Post   HttpMethod = "POST"
-	Put    HttpMethod = "PUT"
-	Delete HttpMethod = "DELETE"
-)
-
 const HEADER_LIMIT_BYTES = 8192
 
-var supportedHttpMethods = []string{string(Get), string(Post), string(Put), string(Delete)}
+var supportedHttpMethods = []string{string(common.Get), string(common.Post), string(common.Put), string(common.Delete)}
 
 type Headers map[string]string
 
@@ -78,17 +70,33 @@ func (s *HttpServer) ShutDown() {
 
 func (s *HttpServer) handleConnection(conn net.Conn) {
 
-	request, _ := s.readHeader(conn)
+	request, err := s.readHeader(conn)
+	if err != nil {
+		fmt.Printf("error while reading the header %v:", err)
+		os.Exit(1)
+	}
 
-	request, _ = parseQuery(request)
+	request, err = parseQuery(request)
+	if err != nil {
+		fmt.Printf("error while reading the query variables %v:", err)
+		os.Exit(1)
+	}
 
-	request, _ = parseRequestCookie(request)
+	request, err = parseRequestCookie(request)
+	if err != nil {
+		fmt.Printf("error while reading the cookies %v:", err)
+		os.Exit(1)
+	}
 
-	_ = readBody(&request, conn)
+	err = request.readBody(conn)
+	if err != nil {
+		fmt.Printf("error while reading the body %v:", err)
+		os.Exit(1)
+	}
 
-	response := generateHttpResponse(request)
+	response := generateHttpWireResponse(request)
 
-	encodedResponse := encodeHttpResponseToBinary(response)
+	encodedResponse := encodeHttpWireResponseToBinary(response)
 
 	conn.Write(encodedResponse)
 
@@ -173,7 +181,7 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 		return
 	}
 
-	reqLine.Method = HttpMethod(rawMethod)
+	reqLine.Method = common.HttpMethod(rawMethod)
 
 	// By default set the resource as self.
 	reqLine.URI = "*"
@@ -228,11 +236,11 @@ func parseHeadertoMap(rawHeaders string) Headers {
 	return headerMap
 }
 
-func generateHttpResponse(request HttpRequest) (response HttpResponse) {
+func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 	respCode := common.StatusCode(OK)
 
-	if request.Method != Get {
+	if request.Method != common.Get {
 		respCode = common.StatusCode(NOT_IMPLEMENTED)
 	}
 
@@ -247,7 +255,7 @@ func generateHttpResponse(request HttpRequest) (response HttpResponse) {
 		"Content-Length": "0",
 	}
 
-	response = HttpResponse{
+	response = HttpWireResponse{
 		ResponseLine: respLine,
 		Headers:      headers,
 	}
@@ -256,7 +264,7 @@ func generateHttpResponse(request HttpRequest) (response HttpResponse) {
 
 }
 
-func encodeHttpResponseToBinary(response HttpResponse) (data []byte) {
+func encodeHttpWireResponseToBinary(response HttpWireResponse) (data []byte) {
 
 	binaryResponse := strings.Builder{}
 
@@ -291,24 +299,32 @@ func parseQuery(request HttpRequest) (HttpRequest, error) {
 }
 
 func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
+
 	if len(request.Headers["Cookie"]) != 0 {
+
 		request.Cookies = cookie.NewCookieList()
 		splitCookies := strings.Split(request.Headers["Cookie"], ";")
+
 		for _, splitCookie := range splitCookies {
+
 			c, err := cookie.ParseRequestCookie(splitCookie)
 			if err != nil {
 				fmt.Printf("Error cookie is not valid - %v", err)
 				continue
 			}
-
 			request.Cookies.Add(c)
 
 		}
+
 	}
+
 	return request, nil
 }
 
-func readBody(req *HttpRequest, conn net.Conn) (err error) {
+/**
+ * This function reads the body from the request and stores in binary form.
+ */
+func (req *HttpRequest) readBody(conn net.Conn) (err error) {
 
 	bodyLen, err := strconv.Atoi(req.Headers["Content-Length"])
 
@@ -321,10 +337,9 @@ func readBody(req *HttpRequest, conn net.Conn) (err error) {
 		return
 	}
 
+	// Read the whole body at once in the buffer.
 	buffer := make([]byte, bodyLen)
-
 	_, err = conn.Read(buffer)
-
 	req.Body = bytes.NewReader(buffer)
 
 	return err
