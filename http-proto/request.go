@@ -1,6 +1,7 @@
 package httpproto
 
 import (
+	"http-v1_1/http-proto/common"
 	"http-v1_1/http-proto/cookie"
 	"io"
 	"net/url"
@@ -15,7 +16,7 @@ type HttpRequest struct {
 }
 
 type RequestLine struct {
-	Method  HttpMethod
+	Method  common.HttpMethod
 	URI     string
 	Version string
 }

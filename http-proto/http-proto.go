@@ -46,6 +46,7 @@ func NewServer(cfg Config) (server HttpServer, err error) {
 
 	server.listener = listener
 	server.timeout = cfg.Timeout
+
 	return
 }
 
