@@ -50,6 +50,15 @@ var (
 	ErrSecureRequiredForNone = errors.New("secure flag required when SameSite=None")
 )
 
+/*
+The manager is responsible for managing the cookie. Ensure the cookie manager can be safely managed using concurrency.
+*/
+type CookieManager interface {
+	Get(name string) (Cookie, error) // Fetches the cookie.
+	Add(c Cookie) error              // This method will add the cookie. It replaces the existing cookie.
+	Set(cookie Cookie) error         // This method will update the cookie if it exists or will add it.
+}
+
 // String returns the string representation of SameSite attribute
 func (s SameSite) String() string {
 	switch s {

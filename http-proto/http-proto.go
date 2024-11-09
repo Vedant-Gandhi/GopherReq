@@ -21,8 +21,6 @@ const HEADER_LIMIT_BYTES = 8192
 
 var supportedHttpMethods = []string{string(common.Get), string(common.Post), string(common.Put), string(common.Delete)}
 
-type Headers map[string]string
-
 type Config struct {
 	Domain  string
 	Timeout int
@@ -74,12 +72,6 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 	request, err := s.readHeader(conn)
 	if err != nil {
 		fmt.Printf("error while reading the header %v:", err)
-		os.Exit(1)
-	}
-
-	request, err = parseQuery(request)
-	if err != nil {
-		fmt.Printf("error while reading the query variables %v:", err)
 		os.Exit(1)
 	}
 
@@ -135,6 +127,7 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 		data.Write(readBuffer[:bytesReadCount])
 
 		if data.Len() > HEADER_LIMIT_BYTES {
+			fmt.Printf("Header len limit: %v", data.Len())
 			break
 		}
 
@@ -149,11 +142,20 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 				return request, err
 			}
 
-			parsedHeaders := parseHeadertoMap(headers[reqLineIdx+2:]) // Added +2 to skip \r\n
+			parsedHeaders := parseRequestHeaders(headers[reqLineIdx+2:]) // Added +2 to skip \r\n
 
 			request.Headers = parsedHeaders
-			request.RequestLine = parsedReqLine
 
+			host, hostExist := request.Headers.Get("host")
+
+			if hostExist {
+				parsedReqLine.URI.Host = host[0]
+				request.URI = parsedReqLine.URI
+				request.Method = parsedReqLine.Method
+				request.Version = parsedReqLine.Version
+				request.RawURI = parsedReqLine.URI.String()
+
+			}
 			return request, nil // Return immediately after parsing headers
 		}
 	}
@@ -185,7 +187,13 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 	reqLine.Method = common.HttpMethod(rawMethod)
 
 	// By default set the resource as self.
-	reqLine.URI = "*"
+	selfResourceUrl, err := url.Parse("*")
+
+	if err != nil {
+		return reqLine, err
+	}
+
+	reqLine.URI = *selfResourceUrl
 
 	if indiviualData[1] != "*" {
 		uri, err := url.ParseRequestURI(indiviualData[1])
@@ -194,7 +202,7 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 			return reqLine, err
 		}
 
-		reqLine.URI = uri.String()
+		reqLine.URI = *uri
 	}
 
 	reqLine.Version = indiviualData[2]
@@ -203,11 +211,11 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 
 }
 
-func parseHeadertoMap(rawHeaders string) Headers {
+func parseRequestHeaders(rawHeaders string) Headers {
 
 	splitHeader := strings.Split(rawHeaders, "\r\n")
 
-	headerMap := make(map[string]string)
+	headers := make(Headers)
 	for _, line := range splitHeader {
 
 		row := strings.SplitN(line, ":", 2)
@@ -232,9 +240,9 @@ func parseHeadertoMap(rawHeaders string) Headers {
 		// Join parts back with "-"
 		finalKey := strings.Join(parts, "-")
 
-		headerMap[finalKey] = value
+		headers.Upsert(finalKey, value)
 	}
-	return headerMap
+	return headers
 }
 
 func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
@@ -251,10 +259,10 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 		Version: request.Version,
 	}
 
-	headers := Headers{
-		"Date":           time.Now().UTC().Format(time.RFC1123),
-		"Content-Length": "0",
-	}
+	headers := make(Headers)
+
+	headers.Set("Date", time.Now().UTC().Format(time.RFC1123))
+	headers.Set("Content-Length", "0")
 
 	response = HttpWireResponse{
 		ResponseLine: respLine,
@@ -281,40 +289,26 @@ func encodeHttpWireResponseToBinary(response HttpWireResponse) (data []byte) {
 	return
 }
 
-func parseQuery(request HttpRequest) (HttpRequest, error) {
-
-	if len(request.URI) == 0 {
-		return request, nil
-	}
-
-	query, err := url.ParseQuery(request.URI)
-
-	if err != nil {
-		fmt.Printf("Error while parsing the query variables - %v", err)
-		return request, err
-	}
-
-	request.Query = query
-
-	return request, nil
-}
-
 func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
 
 	if len(request.Headers["Cookie"]) != 0 {
 
 		request.Cookies = cookie.NewCookieList()
-		splitCookies := strings.Split(request.Headers["Cookie"], ";")
 
-		for _, splitCookie := range splitCookies {
+		for _, rawCookie := range request.Headers["Cookie"] {
 
-			c, err := cookie.ParseRequestCookie(splitCookie)
-			if err != nil {
-				fmt.Printf("Error cookie is not valid - %v", err)
-				continue
+			splitCookies := strings.Split(rawCookie, ";")
+
+			for _, splitCookie := range splitCookies {
+
+				c, err := cookie.ParseRequestCookie(splitCookie)
+				if err != nil {
+					fmt.Printf("Error cookie is not valid - %v", err)
+					continue
+				}
+				request.Cookies.Add(c)
+
 			}
-			request.Cookies.Add(c)
-
 		}
 
 	}
@@ -327,7 +321,14 @@ func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
  */
 func (req *HttpRequest) readBody(conn net.Conn) (err error) {
 
-	bodyLen, err := strconv.Atoi(req.Headers["Content-Length"])
+	rawLen := "0"
+
+	contentLengths, exist := req.Headers.Get("Content-Length")
+
+	if exist {
+		rawLen = contentLengths[0]
+	}
+	bodyLen, err := strconv.Atoi(rawLen)
 
 	if err != nil {
 		err = ErrInvalidContentLength
