@@ -16,6 +16,17 @@ This educational project aims to:
 - Go 1.x or higher
 - Git
 
+### Directory Structure
+```
+├── README.md
+├── cookie/
+│   ├── cookie.go
+├── common/
+│   ├── common.go       # Shared constants and types
+├── request.go          # HTTP request parsing and handling
+├── response.go         # HTTP response generation
+└── http-proto.go      # Contains the core functions to handle the flow of an http request
+```
 ### Installation
 
 1. Clone the repository
