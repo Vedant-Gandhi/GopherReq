@@ -75,7 +75,7 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 		os.Exit(1)
 	}
 
-	request, err = parseRequestCookie(request)
+	err = parseRequestCookie(&request)
 	if err != nil {
 		fmt.Printf("error while reading the cookies %v:", err)
 		os.Exit(1)
@@ -149,7 +149,7 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 			host, hostExist := request.Headers.Get("host")
 
 			if hostExist {
-				parsedReqLine.URI.Host = host[0]
+				parsedReqLine.URI.Host = host.String()
 				request.URI = parsedReqLine.URI
 				request.Method = parsedReqLine.Method
 				request.Version = parsedReqLine.Version
@@ -240,7 +240,7 @@ func parseRequestHeaders(rawHeaders string) Headers {
 		// Join parts back with "-"
 		finalKey := strings.Join(parts, "-")
 
-		headers.Upsert(finalKey, value)
+		headers.Upsert(finalKey, HeaderValue(value))
 	}
 	return headers
 }
@@ -261,7 +261,7 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 	headers := make(Headers)
 
-	headers.Set("Date", time.Now().UTC().Format(time.RFC1123))
+	headers.Set("Date", HeaderValue(time.Now().UTC().Format(time.RFC1123)))
 	headers.Set("Content-Length", "0")
 
 	response = HttpWireResponse{
@@ -289,15 +289,17 @@ func encodeHttpWireResponseToBinary(response HttpWireResponse) (data []byte) {
 	return
 }
 
-func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
+func parseRequestCookie(request *HttpRequest) error {
 
 	if len(request.Headers["Cookie"]) != 0 {
 
 		request.Cookies = cookie.NewCookieList()
 
-		for _, rawCookie := range request.Headers["Cookie"] {
+		cookieValues := request.Headers.GetAllValues("Cookie")
 
-			splitCookies := strings.Split(rawCookie, ";")
+		for _, rawCookie := range cookieValues {
+
+			splitCookies := strings.Split(rawCookie.String(), ";")
 
 			for _, splitCookie := range splitCookies {
 
@@ -313,7 +315,7 @@ func parseRequestCookie(request HttpRequest) (HttpRequest, error) {
 
 	}
 
-	return request, nil
+	return nil
 }
 
 /**
@@ -323,10 +325,10 @@ func (req *HttpRequest) readBody(conn net.Conn) (err error) {
 
 	rawLen := "0"
 
-	contentLengths, exist := req.Headers.Get("Content-Length")
+	contentLength, exist := req.Headers.Get("Content-Length")
 
 	if exist {
-		rawLen = contentLengths[0]
+		rawLen = contentLength.String()
 	}
 	bodyLen, err := strconv.Atoi(rawLen)
 

@@ -5,8 +5,8 @@ import (
 	"net/url"
 )
 
-type HeaderValue []string
-type Headers map[string][]string
+type HeaderValue string
+type Headers map[string][]HeaderValue
 
 type RequestLine struct {
 	URI     url.URL
@@ -14,14 +14,18 @@ type RequestLine struct {
 	Method  common.HttpMethod
 }
 
-func (h Headers) Set(key, value string) {
+func (h HeaderValue) String() string {
+	return string(h)
+}
+
+func (h Headers) Set(key string, value HeaderValue) {
 	canonicalKey := common.GetCanonicalName(key)
 
-	h[canonicalKey] = []string{value}
+	h[canonicalKey] = []HeaderValue{value}
 }
 
 // It performs the upsert operation where if the key does not exist it will create a new entry else it will append to existing values.
-func (h Headers) Upsert(key, value string) {
+func (h Headers) Upsert(key string, value HeaderValue) {
 	canonicalKey := common.GetCanonicalName(key)
 
 	existingValues, exists := h[canonicalKey]
@@ -37,7 +41,18 @@ func (h Headers) Upsert(key, value string) {
 // Returns the value of the header. It fetches the key by canonical name which it automatically converts to when getting it.
 func (h Headers) Get(key string) (value HeaderValue, exist bool) {
 	canonicalKey := common.GetCanonicalName(key)
-	value, exist = h[canonicalKey]
+	values, exist := h[canonicalKey]
+
+	if exist {
+		value = values[0]
+	}
+
+	return
+}
+
+func (h Headers) GetAllValues(key string) (value []HeaderValue) {
+	canonicalKey := common.GetCanonicalName(key)
+	value = h[canonicalKey]
 
 	return
 }
