@@ -44,7 +44,7 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 	rawMethod := indiviualData[0]
 	rawMethod = strings.Trim(rawMethod, " ")
 
-	if !slices.Contains(supportedHttpMethods, rawMethod) {
+	if !slices.Contains(supportedHttpMethods, common.HttpMethod(rawMethod)) {
 		err = httperr.ErrInvalidHttpMethod
 		return
 	}
@@ -159,9 +159,9 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 			request.Headers = parsedHeaders
 
-			host, hostExist := request.Headers.Get("host")
+			host := request.Headers.Get("host")
 
-			if hostExist {
+			if host != "" {
 				parsedReqLine.URI.Host = host.String()
 				request.URI = parsedReqLine.URI
 				request.Method = parsedReqLine.Method
@@ -212,9 +212,9 @@ func (req *HttpRequest) readBody(conn net.Conn) (err error) {
 
 	rawLen := "0"
 
-	contentLength, exist := req.Headers.Get("Content-Length")
+	contentLength := req.Headers.Get("Content-Length")
 
-	if exist {
+	if contentLength != "" {
 		rawLen = contentLength.String()
 	}
 	bodyLen, err := strconv.Atoi(rawLen)

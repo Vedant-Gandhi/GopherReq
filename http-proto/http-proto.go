@@ -11,7 +11,7 @@ import (
 
 const HEADER_LIMIT_BYTES = uint32(8192)
 
-var supportedHttpMethods = []string{string(common.Get), string(common.Post), string(common.Put), string(common.Delete)}
+var supportedHttpMethods = []common.HttpMethod{common.Get, common.Post, common.Put, common.Delete}
 
 type Config struct {
 	Domain  string

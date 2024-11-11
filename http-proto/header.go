@@ -39,7 +39,7 @@ func (h Headers) Apsert(key string, value HeaderValue) {
 }
 
 // Returns the value of the header. It fetches the key by canonical name which it automatically converts to when getting it.
-func (h Headers) Get(key string) (value HeaderValue, exist bool) {
+func (h Headers) Get(key string) (value HeaderValue) {
 	canonicalKey := common.GetCanonicalName(key)
 	values, exist := h[canonicalKey]
 
