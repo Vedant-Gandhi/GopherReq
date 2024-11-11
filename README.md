@@ -25,7 +25,7 @@ This educational project aims to:
 │   ├── common.go       # Shared constants and types
 ├── request.go          # HTTP request parsing and handling
 ├── response.go         # HTTP response generation
-└── http-proto.go      # Contains the core functions to handle the flow of an http request
+└── http-proto.go      # Contains the core functions to handle the flow of an http request.
 ```
 ### Installation
 

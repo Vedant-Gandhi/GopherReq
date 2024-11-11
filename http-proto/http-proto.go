@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"http-v1_1/http-proto/common"
 	"http-v1_1/http-proto/cookie"
+	"http-v1_1/http-proto/httperr"
 	"io"
 	"net"
-	"net/url"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 const HEADER_LIMIT_BYTES = 8192
@@ -160,89 +158,7 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 		}
 	}
 
-	return request, errors.New("incomplete headers")
-}
-
-func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
-	// Format - Method SP Request-URI SP HTTP-Version CRLF
-	// Ref - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01#Request-Line
-
-	rawData = strings.Trim(rawData, " ")
-
-	indiviualData := strings.Split(rawData, " ")
-
-	if len(indiviualData) != 3 {
-		err = errors.New("invalid request line")
-		return
-	}
-
-	rawMethod := indiviualData[0]
-	rawMethod = strings.Trim(rawMethod, " ")
-
-	if !slices.Contains(supportedHttpMethods, rawMethod) {
-		err = errors.New("invalid http method")
-		return
-	}
-
-	reqLine.Method = common.HttpMethod(rawMethod)
-
-	// By default set the resource as self.
-	selfResourceUrl, err := url.Parse("*")
-
-	if err != nil {
-		return reqLine, err
-	}
-
-	reqLine.URI = *selfResourceUrl
-
-	if indiviualData[1] != "*" {
-		uri, err := url.ParseRequestURI(indiviualData[1])
-
-		if err != nil {
-			return reqLine, err
-		}
-
-		reqLine.URI = *uri
-	}
-
-	reqLine.Version = indiviualData[2]
-
-	return
-
-}
-
-func parseRequestHeaders(rawHeaders string) Headers {
-
-	splitHeader := strings.Split(rawHeaders, "\r\n")
-
-	headers := make(Headers)
-	for _, line := range splitHeader {
-
-		row := strings.SplitN(line, ":", 2)
-
-		if len(row) != 2 {
-			continue
-		}
-
-		// Trim spaces from key and value
-		key := strings.Trim(row[0], " ")
-		value := strings.Trim(row[1], " ")
-
-		// Split key by "-" and capitalize each part
-		parts := strings.Split(key, "-")
-		for i, part := range parts {
-			if len(part) > 0 {
-				// Capitalize first letter and keep rest as is
-				parts[i] = string(unicode.ToUpper(rune(part[0]))) + part[1:]
-			}
-		}
-
-		// Join parts back with "-"
-		finalKey := strings.Join(parts, "-")
-
-		headers.Upsert(finalKey, HeaderValue(value))
-	}
-	return headers
+	return request, httperr.ErrIncompleteHeader
 }
 
 func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
