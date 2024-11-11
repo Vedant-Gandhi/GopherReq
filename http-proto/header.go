@@ -24,8 +24,8 @@ func (h Headers) Set(key string, value HeaderValue) {
 	h[canonicalKey] = []HeaderValue{value}
 }
 
-// It performs the upsert operation where if the key does not exist it will create a new entry else it will append to existing values.
-func (h Headers) Upsert(key string, value HeaderValue) {
+// It performs the apsert operation where if the key does not exist it will create a new entry else it will append to existing values.
+func (h Headers) Apsert(key string, value HeaderValue) {
 	canonicalKey := common.GetCanonicalName(key)
 
 	existingValues, exists := h[canonicalKey]

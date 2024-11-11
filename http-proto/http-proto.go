@@ -1,15 +1,10 @@
 package httpproto
 
 import (
-	"bytes"
 	"fmt"
 	"http-v1_1/http-proto/common"
-	"http-v1_1/http-proto/cookie"
-	"http-v1_1/http-proto/httperr"
-	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -90,72 +85,6 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 
 }
 
-func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-	data := new(bytes.Buffer)
-	readBuffer := make([]byte, 1024)
-
-	// This loop keeps on reading headers if it does not fit in one buffer.
-	for {
-		bytesReadCount, err := conn.Read(readBuffer)
-
-		// Update the read deadline.
-		if h.timeout != 0 {
-			conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
-		}
-		if err != nil {
-			if err == io.EOF {
-				fmt.Println("Client closed the connection")
-				break
-			}
-			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-				fmt.Println("Read timeout - no more data expected")
-				break
-			}
-			fmt.Printf("Error while reading from the connection: %v\n", err)
-			return request, err
-		}
-
-		data.Write(readBuffer[:bytesReadCount])
-
-		if data.Len() > HEADER_LIMIT_BYTES {
-			fmt.Printf("Header len limit: %v", data.Len())
-			break
-		}
-
-		headerEnd := bytes.Index(data.Bytes(), []byte("\r\n\r\n"))
-		if headerEnd != -1 { // If we have found header end
-			headers := string(data.Bytes()[:headerEnd])
-			reqLineIdx := strings.Index(headers, "\r\n")
-
-			reqLine := headers[:reqLineIdx]
-			parsedReqLine, err := parseRequestLine(reqLine)
-			if err != nil {
-				return request, err
-			}
-
-			parsedHeaders := parseRequestHeaders(headers[reqLineIdx+2:]) // Added +2 to skip \r\n
-
-			request.Headers = parsedHeaders
-
-			host, hostExist := request.Headers.Get("host")
-
-			if hostExist {
-				parsedReqLine.URI.Host = host.String()
-				request.URI = parsedReqLine.URI
-				request.Method = parsedReqLine.Method
-				request.Version = parsedReqLine.Version
-				request.RawURI = parsedReqLine.URI.String()
-
-			}
-			return request, nil // Return immediately after parsing headers
-		}
-	}
-
-	return request, httperr.ErrIncompleteHeader
-}
-
 func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 	respCode := common.StatusCode(OK)
@@ -198,64 +127,4 @@ func encodeHttpWireResponseToBinary(response HttpWireResponse) (data []byte) {
 
 	data = []byte(binaryResponse.String())
 	return
-}
-
-func parseRequestCookie(request *HttpRequest) error {
-
-	if len(request.Headers["Cookie"]) != 0 {
-
-		request.Cookies = cookie.NewCookieList()
-
-		cookieValues := request.Headers.GetAllValues("Cookie")
-
-		for _, rawCookie := range cookieValues {
-
-			splitCookies := strings.Split(rawCookie.String(), ";")
-
-			for _, splitCookie := range splitCookies {
-
-				c, err := cookie.ParseRequestCookie(splitCookie)
-				if err != nil {
-					fmt.Printf("Error cookie is not valid - %v", err)
-					continue
-				}
-				request.Cookies.Add(c)
-
-			}
-		}
-
-	}
-
-	return nil
-}
-
-/**
- * This function reads the body from the request and stores in binary form.
- */
-func (req *HttpRequest) readBody(conn net.Conn) (err error) {
-
-	rawLen := "0"
-
-	contentLength, exist := req.Headers.Get("Content-Length")
-
-	if exist {
-		rawLen = contentLength.String()
-	}
-	bodyLen, err := strconv.Atoi(rawLen)
-
-	if err != nil {
-		err = httperr.ErrInvalidContentLength
-		return
-	}
-
-	if bodyLen == 0 {
-		return
-	}
-
-	// Read the whole body at once in the buffer.
-	buffer := make([]byte, bodyLen)
-	_, err = conn.Read(buffer)
-	req.Body = bytes.NewReader(buffer)
-
-	return err
 }
