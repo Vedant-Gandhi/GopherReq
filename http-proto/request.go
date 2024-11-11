@@ -1,9 +1,9 @@
 package httpproto
 
 import (
-	"errors"
 	"http-v1_1/http-proto/common"
 	"http-v1_1/http-proto/cookie"
+	"http-v1_1/http-proto/httperr"
 	"io"
 	"net/url"
 	"slices"
@@ -32,7 +32,7 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 	indiviualData := strings.Split(rawData, " ")
 
 	if len(indiviualData) != 3 {
-		err = errors.New("invalid request line")
+		err = httperr.ErrInvalidRequestLine
 		return
 	}
 
@@ -40,7 +40,7 @@ func parseRequestLine(rawData string) (reqLine RequestLine, err error) {
 	rawMethod = strings.Trim(rawMethod, " ")
 
 	if !slices.Contains(supportedHttpMethods, rawMethod) {
-		err = errors.New("invalid http method")
+		err = httperr.ErrInvalidHttpMethod
 		return
 	}
 

@@ -2,7 +2,6 @@ package httpproto
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"http-v1_1/http-proto/common"
 	"http-v1_1/http-proto/cookie"
@@ -28,10 +27,6 @@ type HttpServer struct {
 	listener net.Listener
 	timeout  int
 }
-
-var (
-	ErrInvalidContentLength = errors.New("content length is invalid")
-)
 
 func NewServer(cfg Config) (server HttpServer, err error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:8811")
@@ -249,7 +244,7 @@ func (req *HttpRequest) readBody(conn net.Conn) (err error) {
 	bodyLen, err := strconv.Atoi(rawLen)
 
 	if err != nil {
-		err = ErrInvalidContentLength
+		err = httperr.ErrInvalidContentLength
 		return
 	}
 
