@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const HEADER_LIMIT_BYTES = 8192
+const HEADER_LIMIT_BYTES = uint32(8192)
 
 var supportedHttpMethods = []string{string(common.Get), string(common.Post), string(common.Put), string(common.Delete)}
 

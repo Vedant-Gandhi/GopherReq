@@ -139,7 +139,7 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 		data.Write(readBuffer[:bytesReadCount])
 
-		if data.Len() > HEADER_LIMIT_BYTES {
+		if uint32(data.Len()) > HEADER_LIMIT_BYTES {
 			fmt.Printf("Header len limit: %v", data.Len())
 			break
 		}
