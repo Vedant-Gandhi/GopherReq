@@ -1,4 +1,4 @@
-module http-v1_1
+module gopherreq
 
 go 1.23.1
 

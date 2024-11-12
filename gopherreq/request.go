@@ -1,11 +1,12 @@
-package httpproto
+package gopherreq
 
 import (
 	"bytes"
 	"fmt"
-	"http-v1_1/http-proto/common"
-	"http-v1_1/http-proto/cookie"
-	"http-v1_1/http-proto/httperr"
+	"gopherreq/gopherreq/common"
+	"gopherreq/gopherreq/cookie"
+	"gopherreq/gopherreq/httperr"
+
 	"io"
 	"net"
 	"net/url"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	httpproto "http-v1_1/http-proto"
+	"gopherreq/gopherreq"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -17,12 +17,12 @@ func main() {
 		address = "localhost:8811"
 	}
 
-	config := httpproto.Config{
+	config := gopherreq.Config{
 		Domain:  address,
 		Timeout: 4000,
 	}
 
-	server, err := httpproto.NewServer(config)
+	server, err := gopherreq.NewServer(config)
 
 	fmt.Printf("Server started listening and is accepting connections on the fly.")
 

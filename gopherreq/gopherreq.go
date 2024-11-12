@@ -1,8 +1,8 @@
-package httpproto
+package gopherreq
 
 import (
 	"fmt"
-	"http-v1_1/http-proto/common"
+	"gopherreq/gopherreq/common"
 	"net"
 	"os"
 	"strings"

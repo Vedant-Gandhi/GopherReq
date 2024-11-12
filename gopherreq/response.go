@@ -1,7 +1,7 @@
-package httpproto
+package gopherreq
 
 import (
-	"http-v1_1/http-proto/common"
+	"gopherreq/gopherreq/common"
 	"io"
 	"time"
 )

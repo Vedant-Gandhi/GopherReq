@@ -1,4 +1,4 @@
-package httpproto
+package gopherreq
 
 /*
 This Reader allows to read the contents of the body.
