@@ -77,9 +77,12 @@ func (s *HttpServer) handleConnection(conn net.Conn) {
 
 	response := generateHttpWireResponse(request)
 
-	encodedResponse := encodeHttpWireResponseToBinary(response)
+	err = writeResponse(response, conn)
 
-	conn.Write(encodedResponse)
+	if err != nil {
+		// Do nothing for now.
+		// TODO - Add handling for the situation.
+	}
 
 	defer conn.Close()
 
@@ -112,18 +115,23 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 }
 
-func encodeHttpWireResponseToBinary(response HttpWireResponse) (data []byte) {
+func writeResponse(response HttpWireResponse, conn net.Conn) (err error) {
 
-	binaryResponse := strings.Builder{}
+	serializedResponse := strings.Builder{}
 
-	binaryResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.ResponseLine.Version, response.ResponseLine.Code, response.ResponseLine.Reason, common.CRLF)) // The Response Line.
+	// Writes the response line.
+	serializedResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.ResponseLine.Version, response.ResponseLine.Code, response.ResponseLine.Reason, common.CRLF)) // The Response Line.
 
+	// Write the headers to the output.
 	for key, value := range response.Headers {
-		binaryResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+		serializedResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
 	}
 
-	binaryResponse.WriteString(common.CRLF)
+	serializedResponse.WriteString(common.CRLF)
 
-	data = []byte(binaryResponse.String())
+	data := []byte(serializedResponse.String())
+
+	_, err = conn.Write(data)
+
 	return
 }
