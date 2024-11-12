@@ -1,4 +1,4 @@
-# HTTP-1.1-Lib
+# GopherReq
 
 A Go library implementing HTTP/1.1 protocol from scratch, designed for learning and understanding the protocol's inner workings.
 
@@ -16,12 +16,23 @@ This educational project aims to:
 - Go 1.x or higher
 - Git
 
+### Directory Structure
+```
+├── README.md
+├── cookie/
+│   ├── cookie.go
+├── common/
+│   ├── common.go       # Shared constants and types
+├── request.go          # HTTP request parsing and handling
+├── response.go         # HTTP response generation
+└── http-proto.go      # Contains the core functions to handle the flow of an http request.
+```
 ### Installation
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/http-1.1-lib.git
-cd http-1.1-lib
+git clone https://github.com/yourusername/gopherreq.git
+cd gopherreq
 ```
 
 2. Install dependencies

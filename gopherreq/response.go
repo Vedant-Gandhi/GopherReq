@@ -1,8 +1,9 @@
-package httpproto
+package gopherreq
 
 import (
-	"http-v1_1/http-proto/common"
+	"gopherreq/gopherreq/common"
 	"io"
+	"time"
 )
 
 type ResponseBody io.ReadCloser
@@ -174,4 +175,15 @@ var httpStatusPhraseReasons = map[common.StatusCode]string{
 	LOOP_DETECTED:              "Loop Detected",
 	NOT_EXTENDED:               "Not Extended",
 	NETWORK_AUTH_REQUIRED:      "Network Authentication Required",
+}
+
+// Standardize some headers that if not set may break the protocol.
+func (resp *HttpWireResponse) StandardizeHeaders() {
+	if resp.Headers.Get("Date") == "" {
+		resp.Headers.Apsert("Date", HeaderValue(time.Now().UTC().Format(time.RFC1123)))
+	}
+
+	if resp.Headers.Get("Content-Length") == "" {
+		resp.Headers.Apsert("Content-Length", HeaderValue("0"))
+	}
 }
