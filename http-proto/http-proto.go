@@ -109,6 +109,8 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 		Headers:      headers,
 	}
 
+	response.Headers.Set("Transfer-Encoding", "chunked")
+
 	response.StandardizeHeaders()
 
 	return
@@ -117,14 +119,31 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 func writeResponse(response HttpWireResponse, conn net.Conn) (err error) {
 
+	transferEncoding := response.Headers.Get("Transfer-Encoding")
+
+	if strings.EqualFold(transferEncoding.String(), "chunked") {
+		response.Headers.Remove("Content-Length")
+	}
+
+	err = writeHeaderResponse(response, conn)
+
+	// TODO - Add body writing for the response.
+
+	return
+}
+
+func writeHeaderResponse(response HttpWireResponse, conn net.Conn) (err error) {
+
 	serializedResponse := strings.Builder{}
 
 	// Writes the response line.
 	serializedResponse.WriteString(fmt.Sprintf("%s %d %s%s", response.ResponseLine.Version, response.ResponseLine.Code, response.ResponseLine.Reason, common.CRLF)) // The Response Line.
 
 	// Write the headers to the output.
-	for key, value := range response.Headers {
-		serializedResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	for key, values := range response.Headers {
+		for _, value := range values {
+			serializedResponse.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+		}
 	}
 
 	serializedResponse.WriteString(common.CRLF)
