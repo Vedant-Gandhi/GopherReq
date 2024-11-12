@@ -4,8 +4,9 @@ import "errors"
 
 // Shared Errors
 var (
-	ErrIncompleteHeader  = errors.New("incomplete headers")
-	ErrInvalidHttpMethod = errors.New("invalid http method")
+	ErrIncompleteHeader    = errors.New("incomplete headers")
+	ErrHeaderLimitExceeded = errors.New("size of headers exceeds the limit")
+	ErrInvalidHttpMethod   = errors.New("invalid http method")
 )
 
 // Http Request Errors

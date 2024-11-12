@@ -111,7 +111,9 @@ func parseRequestHeaders(rawHeaders string) Headers {
 
 // Reads the header from the connection.
 func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+
+	// Adjust the read deadline.
+	conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout) * time.Millisecond))
 
 	data := new(bytes.Buffer)
 	readBuffer := make([]byte, 1024)
@@ -121,9 +123,8 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 		bytesReadCount, err := conn.Read(readBuffer)
 
 		// Update the read deadline.
-		if h.timeout != 0 {
-			conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
-		}
+		conn.SetReadDeadline(time.Now().Add(time.Duration(h.timeout * int(time.Millisecond))))
+
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("Client closed the connection")
@@ -141,7 +142,8 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 
 		if uint32(data.Len()) > HEADER_LIMIT_BYTES {
 			fmt.Printf("Header len limit: %v", data.Len())
-			break
+			err = httperr.ErrHeaderLimitExceeded
+			return request, err
 		}
 
 		headerEnd := bytes.Index(data.Bytes(), []byte("\r\n\r\n"))
@@ -167,7 +169,6 @@ func (h HttpServer) readHeader(conn net.Conn) (request HttpRequest, err error) {
 				request.Method = parsedReqLine.Method
 				request.Version = parsedReqLine.Version
 				request.RawURI = parsedReqLine.URI.String()
-
 			}
 			return request, nil // Return immediately after parsing headers
 		}
