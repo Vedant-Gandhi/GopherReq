@@ -101,13 +101,12 @@ func generateHttpWireResponse(request HttpRequest) (response HttpWireResponse) {
 
 	headers := make(Headers)
 
-	headers.Set("Date", HeaderValue(time.Now().UTC().Format(time.RFC1123)))
-	headers.Set("Content-Length", "0")
-
 	response = HttpWireResponse{
 		ResponseLine: respLine,
 		Headers:      headers,
 	}
+
+	response.StandardizeHeaders()
 
 	return
 

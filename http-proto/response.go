@@ -177,7 +177,8 @@ var httpStatusPhraseReasons = map[common.StatusCode]string{
 	NETWORK_AUTH_REQUIRED:      "Network Authentication Required",
 }
 
-func (resp *HttpWireResponse) StandardizeResponse() {
+// Standardize some headers that if not set may break the protocol.
+func (resp *HttpWireResponse) StandardizeHeaders() {
 	if resp.Headers.Get("Date") == "" {
 		resp.Headers.Apsert("Date", HeaderValue(time.Now().UTC().Format(time.RFC1123)))
 	}
